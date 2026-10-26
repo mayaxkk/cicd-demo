@@ -1,4 +1,4 @@
-name: Java CI Pipeline
+name: Java CI/CD Pipeline
 
 on:
   push:
@@ -6,8 +6,11 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,3 +26,20 @@ jobs:
 
       - name: Build and test
         run: chmod +x mvnw && ./mvnw --batch-mode clean verify
+
+      - name: Log in to Docker Hub
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cicd-demo:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cicd-demo:1.0
